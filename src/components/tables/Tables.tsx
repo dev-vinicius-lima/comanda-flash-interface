@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Order, OrderDetail } from "@/app/types/types"
 import Image from "next/image"
 import Modal from "./modal/Modal"
+import { useRouter } from "next/navigation"
 
 export default function TableGrid() {
   const [tables, setTables] = useState<Order[]>([])
@@ -14,6 +15,8 @@ export default function TableGrid() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchTableNumber, setSearchTableNumber] = useState("")
   const [searchOrderNumber, setSearchOrderNumber] = useState("")
+
+  const router = useRouter()
 
   useEffect(() => {
     const fetchTables = async () => {
@@ -72,8 +75,6 @@ export default function TableGrid() {
           },
         }
       )
-      console.log("Response Status:", response.status)
-
       if (!response.ok) {
         const errorDetails = await response.text()
         console.error("Erro na requisição:", errorDetails)
@@ -82,9 +83,15 @@ export default function TableGrid() {
       const data = await response.json()
       console.log("📊 Dados recebidos da API:", data)
 
-      // Verifica se há pedidos dentro da resposta
-      if (data && Array.isArray(data.orders) && data.orders.length > 0) {
-        const order = data.orders[0]
+      const openOrders = data.orders.filter(
+        (order: Order) => order.status === "Aberta"
+      )
+      if (
+        data &&
+        Array.isArray(openOrders.orders) &&
+        openOrders.orders.length > 0
+      ) {
+        const order = openOrders.orders[0]
 
         const formattedData: OrderDetail = {
           id: order.id,
@@ -97,7 +104,7 @@ export default function TableGrid() {
           items: order.items || [],
           totalValue: order.totalValue,
           formattedTotalValue: order.formattedTotalValue,
-          orders: data.orders,
+          orders: openOrders.orders,
         }
 
         setIsModalOpen(true)
@@ -124,14 +131,12 @@ export default function TableGrid() {
   )
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "available":
-        return "bg-[#2196F3] hover:bg-[#1E88E5] text-white"
-      case "occupied":
-        return "bg-[#FF6B2B] hover:bg-[#E31837] text-white"
-      case "Aberta":
-        return "bg-[#4CAF50] hover:bg-[#43A047] text-white"
+    if (status === "available") {
+      return "bg-[#4CAF50] hover:bg-[#43A047] text-white"
+    } else if (status === "occupied") {
+      return "bg-[#FF6B2B] hover:bg-[#E31837] text-white"
     }
+    return ""
   }
 
   const filteredTables = uniqueTables.filter(
@@ -203,63 +208,66 @@ export default function TableGrid() {
             {/* Exibir detalhes da mesa ao clicar */}
             <Modal isOpen={isModalOpen} onClose={closeModal}>
               {tableDetails ? (
-                <div className="text-zinc-200 flex flex-col gap-1">
-                  <h2 className="text-lg font-semibold text-black">
-                    Detalhes da Mesa Nº {tableDetails.number}
-                  </h2>
-
-                  <p className="text-zinc-700">
-                    <strong>Status:</strong>{" "}
-                    {tableDetails.status || "Desconhecido"}
-                  </p>
-                  <div className="border-t border-zinc-400 my-2"></div>
+                <div className="text-zinc-200 flex flex-col gap-1 max-h-[70vh] overflow-y-auto">
+                  <div>
+                    <h2 className="text-lg font-semibold text-black">
+                      Detalhes da Mesa Nº {tableDetails.number}
+                    </h2>
+                    <p className="text-zinc-700">
+                      <strong>Status:</strong>{" "}
+                      {tableDetails.status || "Desconhecido"}
+                    </p>
+                    <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-4"></div>
+                  </div>
                   <h3 className="text-lg font-semibold text-black">
                     Informações do Pedido:
                   </h3>
-                  {/* espaço abaixo para numero da comanda */}
-
-                  <p className="text-zinc-700">
-                    <strong>Comanda:</strong>{" "}
-                    {tableDetails.orders.map((order) => order.id) ||
-                      "Desconhecido"}
-                  </p>
-
-                  <p className="text-zinc-700">
-                    <strong>Cliente:</strong>{" "}
-                    {tableDetails.orders.map((order) => order.customerName) ||
-                      "Sem nome"}
-                  </p>
-                  <p className="text-zinc-700">
-                    <strong>Status do pedido:</strong>{" "}
-                    {tableDetails.status || "Desconhecido"}
-                  </p>
-                  <p className="text-zinc-700">
-                    <strong>Total:</strong>{" "}
-                    {tableDetails.orders.map(
-                      (order) => order.formattedTotalValue
-                    ) || "R$0,00"}
-                  </p>
-
-                  <div className="border-t border-zinc-400 my-2"></div>
-                  <h4 className="text-lg font-semibold text-black">Itens:</h4>
-                  {tableDetails.orders && tableDetails.orders.length > 0 ? (
-                    tableDetails.orders.map((order) =>
-                      order.items && order.items.length > 0 ? (
-                        order.items.map((item, itemIndex) => (
-                          <p
-                            key={`${item}-${itemIndex}`}
-                            className="text-zinc-700"
-                          >
-                            {item.productName} - {item.quantity}x{" "}
-                            {item.unitPrice} (R$ {item.totalPrice.toFixed(2)})
-                          </p>
-                        ))
-                      ) : (
-                        <p key={order.id} className="text-zinc-700">
-                          Nenhum item nesta comanda.
+                  {tableDetails.orders.length > 0 ? (
+                    tableDetails.orders.map((order) => (
+                      <div key={order.id} className="mb-4 flex flex-col gap-1">
+                        <p className="text-zinc-700">
+                          <strong>Comanda:</strong> {order.id}
                         </p>
-                      )
-                    )
+                        <p className="text-zinc-700">
+                          <strong>Cliente:</strong>{" "}
+                          {order.customerName || "Sem nome"}
+                        </p>
+                        <p className="text-zinc-700">
+                          <strong>Status do pedido:</strong>{" "}
+                          {order.status || "Desconhecido"}
+                        </p>
+                        <p className="text-zinc-700">
+                          <strong>Total:</strong>{" "}
+                          {order.formattedTotalValue || "R$0,00"}
+                        </p>
+
+                        <h4 className="text-lg font-semibold text-black">
+                          Itens:
+                        </h4>
+                        {order.items && order.items.length > 0 ? (
+                          order.items.map((item, itemIndex) => (
+                            <>
+                              <p
+                                key={`${item.productName}-${itemIndex}`}
+                                className="text-zinc-700"
+                              >
+                                {item.productName} - {item.quantity}x R${" "}
+                                {item.unitPrice.toFixed(2)} (Total: R${" "}
+                                {item.totalPrice.toFixed(2)})
+                              </p>
+                              <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-4"></div>
+                            </>
+                          ))
+                        ) : (
+                          <>
+                            <p className="text-zinc-700">
+                              Nenhum item nesta comanda.
+                            </p>
+                            <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-4"></div>
+                          </>
+                        )}
+                      </div>
+                    ))
                   ) : (
                     <p className="text-zinc-700">Nenhuma comanda disponível.</p>
                   )}
@@ -276,7 +284,11 @@ export default function TableGrid() {
       <footer className="fixed bottom-0 w-full border-t border-zinc-800 bg-black/50 backdrop-blur-sm">
         <div className="container mx-auto px-4">
           <div className="flex justify-around py-4">
-            <Button variant="ghost" className="text-[#FF6B2B]">
+            <Button
+              variant="ghost"
+              className="text-[#FF6B2B]"
+              onClick={() => router.push("/openOrder")}
+            >
               Lançar pedidos
             </Button>
             <Button variant="ghost" className="text-[#FFD700]">

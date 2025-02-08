@@ -28,11 +28,11 @@ const Modal = ({
           <span className="sr-only">Fechar</span>
         </button>
 
-        <div className="p-6 mt-2">
+        <div className="p-6 mt-2 max-h-[80vh] box-content">
+          {" "}
           <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] bg-clip-text text-transparent">
             Comanda Flash
           </h2>
-
           <div className="space-y-4">{children}</div>
         </div>
       </div>
