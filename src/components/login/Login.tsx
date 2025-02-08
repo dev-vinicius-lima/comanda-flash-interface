@@ -1,5 +1,6 @@
 "use client"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   FieldError,
   FieldErrorsImpl,
@@ -25,6 +26,8 @@ export const Login = () => {
   const [loginError, setLoginError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
+
+  const router = useRouter()
 
   const {
     register,
@@ -59,7 +62,10 @@ export const Login = () => {
       const result = await response.json()
       console.log("Login bem-sucedido:", result)
       const token = result.token
-      localStorage.setItem("token", token)
+      sessionStorage.setItem("token", token)
+      if (token) {
+        router.push("/tables")
+      }
 
       setLoginError("")
       setIsLoading(false)

@@ -1,9 +1,9 @@
 "use client"
-import { Tables } from "@/components/tables/Tables"
+import TableGrid from "@/components/tables/Tables"
 import React from "react"
 
 const page = () => {
-  return <Tables />
+  return <TableGrid />
 }
 
 export default page
