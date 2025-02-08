@@ -1,14 +1,18 @@
-export interface Order {
-  totalValue: number
+export type Order = {
+  id: number
   orderId: number
-  formattedTotalValue: string
-  customerName: string
   tableNumber: number
   status: string
-  id: number
-  items: Item[]
+  totalValue: number
+  formattedTotalValue: string
+  customerName: string
+  items: Array<{
+    productName: string
+    quantity: number
+    unitPrice: number
+    totalPrice: number
+  }>
 }
-
 export interface Item {
   productId: number
   productName: string
