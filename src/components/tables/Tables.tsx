@@ -12,6 +12,7 @@ export default function TableGrid() {
   const [tables, setTables] = useState<Order[]>([])
   const [tableDetails, setTableDetails] = useState<OrderDetail | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [searchTableNumber, setSearchTableNumber] = useState("")
 
   useEffect(() => {
     const fetchTables = async () => {
@@ -130,7 +131,10 @@ export default function TableGrid() {
         return "bg-[#4CAF50] hover:bg-[#43A047] text-white"
     }
   }
-  console.log("Dados da mesa:", tableDetails)
+
+  const filteredTables = uniqueTables.filter((table) =>
+    table.tableNumber.toString().includes(searchTableNumber)
+  )
 
   return (
     <div className="min-h-screen bg-black">
@@ -162,6 +166,8 @@ export default function TableGrid() {
               <input
                 type="text"
                 placeholder="Mesa"
+                value={searchTableNumber}
+                onChange={(e) => setSearchTableNumber(e.target.value)}
                 className="bg-black/50 border border-zinc-800 rounded-md px-4 py-2 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#FF6B2B]"
               />
               <input
@@ -173,7 +179,7 @@ export default function TableGrid() {
 
             {/* Table Grid */}
             <div className="grid grid-cols-3 gap-4">
-              {uniqueTables.map((table) => (
+              {filteredTables.map((table) => (
                 <Button
                   key={table.id}
                   className={`h-24 text-2xl font-bold text-white ${getStatusColor(
@@ -202,6 +208,14 @@ export default function TableGrid() {
                   <h3 className="text-lg font-semibold text-black">
                     Informações do Pedido:
                   </h3>
+                  {/* espaço abaixo para numero da comanda */}
+
+                  <p className="text-zinc-700">
+                    <strong>Comanda:</strong>{" "}
+                    {tableDetails.orders.map((order) => order.id) ||
+                      "Desconhecido"}
+                  </p>
+
                   <p className="text-zinc-700">
                     <strong>Cliente:</strong>{" "}
                     {tableDetails.orders.map((order) => order.customerName) ||
@@ -228,8 +242,8 @@ export default function TableGrid() {
                             key={`${item}-${itemIndex}`}
                             className="text-zinc-700"
                           >
-                            {item.productName} - {item.quantity}x (R${" "}
-                            {item.totalPrice.toFixed(2)})
+                            {item.productName} - {item.quantity}x{" "}
+                            {item.unitPrice} (R$ {item.totalPrice.toFixed(2)})
                           </p>
                         ))
                       ) : (
