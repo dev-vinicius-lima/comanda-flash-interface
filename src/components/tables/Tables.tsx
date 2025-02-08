@@ -13,6 +13,7 @@ export default function TableGrid() {
   const [tableDetails, setTableDetails] = useState<OrderDetail | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchTableNumber, setSearchTableNumber] = useState("")
+  const [searchOrderNumber, setSearchOrderNumber] = useState("")
 
   useEffect(() => {
     const fetchTables = async () => {
@@ -37,6 +38,7 @@ export default function TableGrid() {
             section.orders.length > 0
               ? section.orders.map((order: Order) => ({
                   id: order.id,
+                  orderId: order.id,
                   tableNumber: order.tableNumber,
                   status: order.status === "Aberta" ? "available" : "occupied",
                 }))
@@ -132,8 +134,12 @@ export default function TableGrid() {
     }
   }
 
-  const filteredTables = uniqueTables.filter((table) =>
-    table.tableNumber.toString().includes(searchTableNumber)
+  const filteredTables = uniqueTables.filter(
+    (table) =>
+      table.tableNumber.toString().includes(searchTableNumber) &&
+      (searchOrderNumber
+        ? table.orderId.toString().includes(searchOrderNumber)
+        : true)
   )
 
   return (
@@ -173,6 +179,8 @@ export default function TableGrid() {
               <input
                 type="text"
                 placeholder="Comanda"
+                value={searchOrderNumber}
+                onChange={(e) => setSearchOrderNumber(e.target.value)}
                 className="bg-black/50 border border-zinc-800 rounded-md px-4 py-2 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#FF6B2B]"
               />
             </div>

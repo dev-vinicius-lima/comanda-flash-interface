@@ -1,4 +1,5 @@
 export interface Order {
+  orderId: number
   formattedTotalValue: string
   customerName: string
   tableNumber: number
