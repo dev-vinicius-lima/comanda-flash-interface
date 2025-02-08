@@ -6,19 +6,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Order, OrderDetail } from "@/app/types/types"
 import Image from "next/image"
+import Modal from "./modal/Modal"
 
 export default function TableGrid() {
   const [tables, setTables] = useState<Order[]>([])
   const [tableDetails, setTableDetails] = useState<OrderDetail | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
-    // Função para realizar a requisição GET
     const fetchTables = async () => {
       try {
-        // Recupera o token da sessão
         const token = sessionStorage.getItem("token")
-
-        // Realiza a requisição à API com o token no cabeçalho
         const response = await fetch(
           "https://comanda-flash-production.up.railway.app/tables",
           {
@@ -29,18 +27,12 @@ export default function TableGrid() {
             },
           }
         )
-
         if (!response.ok) {
           throw new Error("Erro ao buscar as mesas")
         }
-
-        // Recupera os dados da resposta
         const data = await response.json()
-
-        // Mapear as mesas e definir status baseado nas ordens
         const fetchedTables = data.flatMap(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (section: any) =>
+          (section: { number: number; orders: Order[] }) =>
             section.orders.length > 0
               ? section.orders.map((order: Order) => ({
                   id: order.id,
@@ -49,7 +41,6 @@ export default function TableGrid() {
                 }))
               : [{ id: section.number, status: "available" }]
         )
-
         setTables(fetchedTables)
       } catch (error) {
         console.error("Erro ao buscar dados da API:", error)
@@ -106,6 +97,7 @@ export default function TableGrid() {
           orders: data.orders,
         }
 
+        setIsModalOpen(true)
         setTableDetails(formattedData)
 
         if (data && Array.isArray(data.orders)) {
@@ -117,6 +109,11 @@ export default function TableGrid() {
     } catch (error) {
       console.error("Erro ao buscar detalhes da mesa:", error)
     }
+  }
+
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setTableDetails(null)
   }
 
   const uniqueTables = tables.filter(
@@ -190,46 +187,65 @@ export default function TableGrid() {
               ))}
             </div>
             {/* Exibir detalhes da mesa ao clicar */}
-            {tableDetails ? (
-              <div className="text-zinc-200">
-                <h2 className="text-lg font-semibold text-white">
-                  Detalhes da Mesa Nº {tableDetails.number}
-                </h2>
-                <p className="text-zinc-300">
-                  <strong>Status:</strong>{" "}
-                  {tableDetails.status || "Desconhecido"}
-                </p>
+            <Modal isOpen={isModalOpen} onClose={closeModal}>
+              {tableDetails ? (
+                <div className="text-zinc-200 flex flex-col gap-1">
+                  <h2 className="text-lg font-semibold text-black">
+                    Detalhes da Mesa Nº {tableDetails.number}
+                  </h2>
 
-                <h3 className="text-lg font-semibold text-white">Pedido:</h3>
-                <p className="text-zinc-300">
-                  <strong>Cliente:</strong>{" "}
-                  {tableDetails.orders.map((order) => order.customerName) ||
-                    "Sem nome"}
-                </p>
-                <p className="text-zinc-300">
-                  <strong>Status do pedido:</strong>{" "}
-                  {tableDetails.status || "Desconhecido"}
-                </p>
-                <p className="text-zinc-300">
-                  <strong>Total:</strong>{" "}
-                  {tableDetails.orders.map(
-                    (order) => order.formattedTotalValue
-                  ) || "R$0,00"}
-                </p>
+                  <p className="text-zinc-700">
+                    <strong>Status:</strong>{" "}
+                    {tableDetails.status || "Desconhecido"}
+                  </p>
+                  <div className="border-t border-zinc-400 my-2"></div>
+                  <h3 className="text-lg font-semibold text-black">
+                    Informações do Pedido:
+                  </h3>
+                  <p className="text-zinc-700">
+                    <strong>Cliente:</strong>{" "}
+                    {tableDetails.orders.map((order) => order.customerName) ||
+                      "Sem nome"}
+                  </p>
+                  <p className="text-zinc-700">
+                    <strong>Status do pedido:</strong>{" "}
+                    {tableDetails.status || "Desconhecido"}
+                  </p>
+                  <p className="text-zinc-700">
+                    <strong>Total:</strong>{" "}
+                    {tableDetails.orders.map(
+                      (order) => order.formattedTotalValue
+                    ) || "R$0,00"}
+                  </p>
 
-                <h4 className="text-lg font-semibold text-white">Itens:</h4>
-                {tableDetails.orders.map((order) =>
-                  order.items.map((item, j) => (
-                    <p key={j} className="text-zinc-300">
-                      {item.productName} - {item.quantity}x (R${" "}
-                      {item.totalPrice.toFixed(2)})
-                    </p>
-                  ))
-                )}
-              </div>
-            ) : (
-              <p className="text-zinc-300">Carregando detalhes da mesa...</p>
-            )}
+                  <div className="border-t border-zinc-400 my-2"></div>
+                  <h4 className="text-lg font-semibold text-black">Itens:</h4>
+                  {tableDetails.orders && tableDetails.orders.length > 0 ? (
+                    tableDetails.orders.map((order) =>
+                      order.items && order.items.length > 0 ? (
+                        order.items.map((item, itemIndex) => (
+                          <p
+                            key={`${item}-${itemIndex}`}
+                            className="text-zinc-700"
+                          >
+                            {item.productName} - {item.quantity}x (R${" "}
+                            {item.totalPrice.toFixed(2)})
+                          </p>
+                        ))
+                      ) : (
+                        <p key={order.id} className="text-zinc-700">
+                          Nenhum item nesta comanda.
+                        </p>
+                      )
+                    )
+                  ) : (
+                    <p className="text-zinc-700">Nenhuma comanda disponível.</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-zinc-700">Carregando detalhes da mesa...</p>
+              )}
+            </Modal>
           </CardContent>
         </Card>
       </main>
