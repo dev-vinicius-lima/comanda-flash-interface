@@ -8,6 +8,7 @@ import { Order, OrderDetail } from "@/app/types/types"
 import Image from "next/image"
 import Modal from "./modal/Modal"
 import { useRouter } from "next/navigation"
+import { toast } from "@/hooks/use-toast"
 
 export default function TableGrid() {
   const [tables, setTables] = useState<Order[]>([])
@@ -194,6 +195,27 @@ export default function TableGrid() {
 
   console.log("Estado das mesas:", tables)
   console.log("Mesas filtradas:", filteredTables)
+
+  function handleDeleteOrder(id: number) {
+    if (!id) {
+      toast({
+        title: "Erro ao excluir ordem",
+        description: "Erro ao excluir ordem",
+        className: "bg-red-600 text-white font-semibold",
+      })
+      return
+    }
+    if (confirm("Tem certeza que deseja excluir essa ordem?")) {
+      router.push("/orderClosed/" + id)
+    } else {
+      toast({
+        title: "Exclusão cancelada",
+        description: "Exclusão foi cancelada",
+        className: "bg-red-600 text-white font-semibold",
+      })
+    }
+  }
+
   return (
     <div className="min-h-screen bg-black">
       {/* Header */}
@@ -276,11 +298,13 @@ export default function TableGrid() {
                         <strong>Status:</strong>{" "}
                         {tableDetails.status || "Desconhecido"}
                       </p>
-                      <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-4"></div>
+                      <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-6"></div>
                     </div>
-                    <h3 className="text-lg font-semibold text-black">
-                      Informações do Pedido:
-                    </h3>
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-semibold text-black">
+                        Informações do Pedido:
+                      </h3>
+                    </div>
                     {tableDetails &&
                     Array.isArray(tableDetails.orders) &&
                     tableDetails.orders.length > 0 ? (
@@ -289,9 +313,21 @@ export default function TableGrid() {
                           key={order.id}
                           className="mb-4 flex flex-col gap-1"
                         >
-                          <p className="text-zinc-700">
-                            <strong>Comanda:</strong> {order.id}
-                          </p>
+                          <div className="flex justify-between items-center">
+                            <p className="text-zinc-700">
+                              <strong>Comanda:</strong> {order.id}
+                            </p>
+                            <Button
+                              variant="ghost"
+                              className="text-white bg-red-600 hover:bg-red/30 w-1/3 h-8 transition-colors text-sm font-semibold mx-2"
+                              size="icon"
+                              onClick={() =>
+                                handleDeleteOrder(order.id as number)
+                              }
+                            >
+                              <p className="text-sm">Fechar Comanda</p>
+                            </Button>
+                          </div>
                           <p className="text-zinc-700">
                             <strong>Cliente:</strong>{" "}
                             {order.customerName || "Sem nome"}
@@ -304,10 +340,18 @@ export default function TableGrid() {
                             <strong>Total:</strong>{" "}
                             {order.formattedTotalValue || "R$0,00"}
                           </p>
-
-                          <h4 className="text-lg font-semibold text-black">
-                            Itens:
-                          </h4>
+                          <div className="flex justify-between items-center">
+                            <h4 className="text-lg font-semibold text-black">
+                              Itens:
+                            </h4>
+                            <Button
+                              variant="ghost"
+                              className="text-white bg-green-600 hover:bg-red/30 w-1/3 h-8 transition-colors text-sm font-semibold mx-2"
+                              size="icon"
+                            >
+                              <p className="text-sm">Adicionar item</p>
+                            </Button>
+                          </div>
                           {order.items && order.items.length > 0 ? (
                             order.items.map((item, itemIndex) => (
                               <div key={`${item.productName}-${itemIndex}`}>
@@ -316,13 +360,16 @@ export default function TableGrid() {
                                   {item.unitPrice.toFixed(2)} (Total: R${" "}
                                   {item.totalPrice.toFixed(2)})
                                 </p>
-                                <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-4"></div>
+                                <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-5"></div>
                               </div>
                             ))
                           ) : (
-                            <p className="text-zinc-700">
-                              Nenhum item nesta comanda.
-                            </p>
+                            <>
+                              <p className="text-zinc-700">
+                                Nenhum item nesta comanda.
+                              </p>
+                              <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-5"></div>
+                            </>
                           )}
                         </div>
                       ))
