@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { toast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
 
 interface OrderItem {
   productId: number
@@ -44,12 +46,40 @@ interface OrderDetails {
   formattedTotalValue: string
 }
 
-const OrderDetails: React.FC<{ order: OrderDetails }> = ({ order }) => {
+export interface OrderDetailsProps {
+  createdAt: string
+  id: number
+  status: string
+  customerName: string
+  updatedAt: string
+  items: OrderItem[]
+  formattedTotalValue: string
+  order: OrderDetails
+}
+
+const closedOrders = async (orderId: number, paymentMethod: string) => {
+  const token = sessionStorage.getItem("token")
+  const response = await fetch(
+    `https://comanda-flash-production.up.railway.app/orders/close/${orderId}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: paymentMethod,
+    }
+  )
+  return await response.json()
+}
+
+const OrderDetails: React.FC<{ order: OrderDetailsProps }> = ({ order }) => {
   const [paymentMethod, setPaymentMethod] = useState<string>("")
+  const router = useRouter()
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FF4D00]/5 to-[#FF0000]/5 p-4 md:p-8">
-      <Card className="max-w-2xl mx-auto border-[#FF4D00]/20">
+    <div className="min-h-screen p-4 md:p-8 bg-black rounded-lg">
+      <Card className="max-w-2xl mx-auto border-[#FF4D00]/20 shadow rounded-lg  bg-gradient-to-r from-[#FF4D00] to-[#FF0000] ">
         <CardHeader className="bg-gradient-to-r from-[#FF4D00] to-[#FF0000] text-white rounded-t-lg">
           <div className="flex justify-between items-center">
             <Button
@@ -96,7 +126,7 @@ const OrderDetails: React.FC<{ order: OrderDetails }> = ({ order }) => {
               <div className="flex items-center space-x-2">
                 <Calendar className="h-5 w-5 text-[#FF4D00]" />
                 <span className="text-gray-600">
-                  {order.updatedAt || "Data não disponível"}
+                  {order.createdAt || "Data não disponível"}
                 </span>
               </div>
             </div>
@@ -173,6 +203,15 @@ const OrderDetails: React.FC<{ order: OrderDetails }> = ({ order }) => {
             <Button
               className="w-full bg-gradient-to-r from-[#FF4D00] to-[#FF0000] hover:opacity-90 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!paymentMethod}
+              onClick={() => {
+                closedOrders(order.id, paymentMethod)
+                toast({
+                  title: "Pagamento Efetuado",
+                  description: "Pagamento efetuado com sucesso",
+                  className: "bg-green-600 text-white font-semibold",
+                })
+                router.push("/tables")
+              }}
             >
               <DollarSign className="mr-2 h-4 w-4" /> Finalizar Pagamento
             </Button>

@@ -1,35 +1,49 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import OrderDetails from "@/components/OrderDetails/OrderDetails"
+import OrderDetails, {
+  OrderDetailsProps,
+} from "@/components/OrderDetails/OrderDetails"
+import { useEffect, useState } from "react"
 
 const OrderDetailsPage = () => {
   const params = useParams()
   const orderId = params.id // Captura o ID da rota
+  const [orderData, setOrderData] = useState<OrderDetailsProps | null>(null)
 
-  // Aqui você pode buscar os detalhes do pedido usando o `orderId`
-  const order = {
-    id: Number(orderId),
-    tableNumber: 1,
-    customerId: 1,
-    customerName: "Cliente Exemplo",
-    status: "Fechada",
-    createdAt: "2023-10-01T12:00:00Z",
-    updatedAt: "2023-10-01T12:30:00Z",
-    items: [
-      {
-        productId: 1,
-        productName: "Produto 1",
-        quantity: 2,
-        totalPrice: 20,
-        unitPrice: 10,
-      },
-    ],
-    totalValue: 20,
-    formattedTotalValue: "R$ 20,00",
+  const fetchOrderDetails = async () => {
+    try {
+      const token = sessionStorage.getItem("token")
+      const response = await fetch(
+        `https://comanda-flash-production.up.railway.app/orders/${orderId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      )
+      if (!response.ok) {
+        throw new Error("Erro ao buscar detalhes do pedido")
+      }
+      const data = await response.json()
+      console.log(data)
+      setOrderData(data)
+    } catch (error) {
+      console.error("Erro ao buscar detalhes do pedido:", error)
+      return null
+    }
   }
+  useEffect(() => {
+    fetchOrderDetails()
+  }, [orderId])
 
-  return <OrderDetails order={order} />
+  return (
+    <>
+      {orderData ? <OrderDetails order={orderData} /> : <div>Loading...</div>}
+    </>
+  )
 }
 
 export default OrderDetailsPage

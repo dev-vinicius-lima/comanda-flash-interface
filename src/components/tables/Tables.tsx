@@ -319,7 +319,7 @@ export default function TableGrid() {
                             </p>
                             <Button
                               variant="ghost"
-                              className="text-white bg-red-600 hover:bg-red/30 w-1/3 h-8 transition-colors text-sm font-semibold mx-2"
+                              className="text-white  bg-gradient-to-r from-[#FF4D00] to-[#FF0000] hover:bg-red/30 w-1/3 h-8 transition-colors text-sm font-semibold mx-2"
                               size="icon"
                               onClick={() =>
                                 handleDeleteOrder(order.id as number)
