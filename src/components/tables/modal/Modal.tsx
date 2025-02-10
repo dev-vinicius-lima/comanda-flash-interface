@@ -1,6 +1,6 @@
 import React from "react"
-import { X } from "lucide-react" // Importando o ícone X
-
+import { X } from "lucide-react"
+import { OrderDetail } from "@/app/types/types"
 const Modal = ({
   isOpen,
   onClose,
@@ -9,6 +9,7 @@ const Modal = ({
   isOpen: boolean
   onClose: () => void
   children: React.ReactNode
+  tableDetails?: OrderDetail | null
 }) => {
   if (!isOpen) return null
 
