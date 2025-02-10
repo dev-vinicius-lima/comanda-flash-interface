@@ -13,10 +13,15 @@ export default function TableGrid() {
   const [tables, setTables] = useState<Order[]>([])
   const [tableDetails, setTableDetails] = useState<OrderDetail | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isClient, setIsClient] = useState(false)
   const [searchTableNumber, setSearchTableNumber] = useState("")
   const [searchOrderNumber, setSearchOrderNumber] = useState("")
 
   const router = useRouter()
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   useEffect(() => {
     const fetchTables = async () => {
@@ -36,17 +41,69 @@ export default function TableGrid() {
           throw new Error("Erro ao buscar as mesas")
         }
         const data = await response.json()
-        const fetchedTables = data.flatMap(
-          (section: { number: number; orders: Order[] }) =>
-            section.orders.length > 0
-              ? section.orders.map((order: Order) => ({
-                  id: order.id,
-                  orderId: order.id,
-                  tableNumber: order.tableNumber,
-                  status: order.status === "Aberta" ? "available" : "occupied",
-                }))
-              : [{ id: section.number, status: "available" }]
+        console.log("📊 Dados recebidos da API GET ALL:", data)
+
+        const tablesMap = new Map<number, Order[]>()
+
+        data.forEach((section: { number: number; orders: Order[] }) => {
+          section.orders.forEach((order: Order) => {
+            if (!tablesMap.has(section.number)) {
+              tablesMap.set(section.number, [])
+            }
+            tablesMap.get(section.number)?.push(order)
+          })
+        })
+
+        const fetchedTables: Order[] = data.map(
+          (section: { id: number; number: number; orders: Order[] }) => {
+            const orders = section.orders
+
+            return {
+              id: section.id,
+              orderId: orders.length > 0 ? orders[0].id : null,
+              number: section.number,
+              tableNumber: section.number,
+              status: orders.some((order) => order.status === "Aberta")
+                ? "occupied"
+                : "available",
+              totalValue: 0,
+              formattedTotalValue: "R$ 0,00",
+              customerName: "",
+              items: [],
+            }
+          }
         )
+
+        // Adicionar mesas sem ordens
+        const existingTableNumbers = new Set(
+          fetchedTables.map((table) => table.tableNumber)
+        )
+        data.forEach(
+          (section: { id: number; number: number; orders: Order[] }) => {
+            if (
+              section.orders.length === 0 &&
+              !existingTableNumbers.has(section.number)
+            ) {
+              fetchedTables.push({
+                id: section.id,
+                orderId: null,
+                number: section.number,
+                tableNumber: section.number,
+                status: "available",
+                totalValue: 0,
+                formattedTotalValue: "R$ 0,00",
+                customerName: "",
+                items: [],
+              })
+            }
+          }
+        )
+
+        const uniqueTables = Array.from(
+          new Set(fetchedTables.map((table) => table.tableNumber))
+        )
+        console.log("Mesas únicas:", uniqueTables)
+
         setTables(fetchedTables)
       } catch (error) {
         console.error("Erro ao buscar dados da API:", error)
@@ -56,7 +113,6 @@ export default function TableGrid() {
     fetchTables()
   }, [])
 
-  // Função para buscar detalhes de uma mesa específica
   const fetchTableDetails = async (tableId: number) => {
     if (isNaN(tableId)) {
       console.error("ID de mesa inválido:", tableId)
@@ -86,16 +142,15 @@ export default function TableGrid() {
       const openOrders = data.orders.filter(
         (order: Order) => order.status === "Aberta"
       )
-      if (
-        data &&
-        Array.isArray(openOrders.orders) &&
-        openOrders.orders.length > 0
-      ) {
-        const order = openOrders.orders[0]
+
+      const tableNumber: number = data.number
+
+      if (openOrders.length > 0) {
+        const order = openOrders[0]
 
         const formattedData: OrderDetail = {
           id: order.id,
-          number: order.number,
+          number: tableNumber,
           customerId: order.customerId,
           customerName: order.customerName || "Sem nome",
           status: data.status,
@@ -104,17 +159,11 @@ export default function TableGrid() {
           items: order.items || [],
           totalValue: order.totalValue,
           formattedTotalValue: order.formattedTotalValue,
-          orders: openOrders.orders,
+          orders: openOrders,
         }
 
         setIsModalOpen(true)
         setTableDetails(formattedData)
-
-        if (data && Array.isArray(data.orders)) {
-          setTableDetails(data)
-        } else {
-          console.error("Estrutura de dados inesperada:", data)
-        }
       }
     } catch (error) {
       console.error("Erro ao buscar detalhes da mesa:", error)
@@ -126,10 +175,6 @@ export default function TableGrid() {
     setTableDetails(null)
   }
 
-  const uniqueTables = tables.filter(
-    (table, index, self) => index === self.findIndex((t) => t.id === table.id)
-  )
-
   const getStatusColor = (status: string) => {
     if (status === "available") {
       return "bg-[#4CAF50] hover:bg-[#43A047] text-white"
@@ -139,14 +184,16 @@ export default function TableGrid() {
     return ""
   }
 
-  const filteredTables = uniqueTables.filter(
+  const filteredTables = tables.filter(
     (table) =>
       table.tableNumber.toString().includes(searchTableNumber) &&
       (searchOrderNumber
-        ? table.orderId.toString().includes(searchOrderNumber)
+        ? table.orderId?.toString().includes(searchOrderNumber)
         : true)
   )
 
+  console.log("Estado das mesas:", tables)
+  console.log("Mesas filtradas:", filteredTables)
   return (
     <div className="min-h-screen bg-black">
       {/* Header */}
@@ -194,88 +241,104 @@ export default function TableGrid() {
             <div className="grid grid-cols-3 gap-4">
               {filteredTables.map((table) => (
                 <Button
-                  key={table.id}
+                  key={`${table.id !== null ? table.id : "no-id"}-${
+                    table.tableNumber
+                  }`}
                   className={`h-24 text-2xl font-bold text-white ${getStatusColor(
                     table.status
                   )}`}
                   variant="ghost"
-                  onClick={() => fetchTableDetails(table.id)}
+                  onClick={() => {
+                    if (table.id !== null) {
+                      fetchTableDetails(table.id)
+                    } else {
+                      console.warn(
+                        `Mesa ${table.tableNumber} não tem ID associado.`
+                      )
+                    }
+                  }}
+                  disabled={table.id === null}
                 >
                   {table.tableNumber}
                 </Button>
               ))}
             </div>
-            {/* Exibir detalhes da mesa ao clicar */}
-            <Modal isOpen={isModalOpen} onClose={closeModal}>
-              {tableDetails ? (
-                <div className="text-zinc-200 flex flex-col gap-1 max-h-[70vh] overflow-y-auto">
-                  <div>
-                    <h2 className="text-lg font-semibold text-black">
-                      Detalhes da Mesa Nº {tableDetails.number}
-                    </h2>
-                    <p className="text-zinc-700">
-                      <strong>Status:</strong>{" "}
-                      {tableDetails.status || "Desconhecido"}
-                    </p>
-                    <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-4"></div>
-                  </div>
-                  <h3 className="text-lg font-semibold text-black">
-                    Informações do Pedido:
-                  </h3>
-                  {tableDetails.orders.length > 0 ? (
-                    tableDetails.orders.map((order) => (
-                      <div key={order.id} className="mb-4 flex flex-col gap-1">
-                        <p className="text-zinc-700">
-                          <strong>Comanda:</strong> {order.id}
-                        </p>
-                        <p className="text-zinc-700">
-                          <strong>Cliente:</strong>{" "}
-                          {order.customerName || "Sem nome"}
-                        </p>
-                        <p className="text-zinc-700">
-                          <strong>Status do pedido:</strong>{" "}
-                          {order.status || "Desconhecido"}
-                        </p>
-                        <p className="text-zinc-700">
-                          <strong>Total:</strong>{" "}
-                          {order.formattedTotalValue || "R$0,00"}
-                        </p>
+            {/* Modal */}
+            {isClient && (
+              <Modal isOpen={isModalOpen} onClose={closeModal}>
+                {tableDetails ? (
+                  <div className="text-zinc-200 flex flex-col gap-1 max-h-[70vh] overflow-y-auto">
+                    <div>
+                      <h2 className="text-lg font-semibold text-black">
+                        Detalhes da Mesa Nº {tableDetails.number}
+                      </h2>
+                      <p className="text-zinc-700">
+                        <strong>Status:</strong>{" "}
+                        {tableDetails.status || "Desconhecido"}
+                      </p>
+                      <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-4"></div>
+                    </div>
+                    <h3 className="text-lg font-semibold text-black">
+                      Informações do Pedido:
+                    </h3>
+                    {tableDetails &&
+                    Array.isArray(tableDetails.orders) &&
+                    tableDetails.orders.length > 0 ? (
+                      tableDetails.orders.map((order) => (
+                        <div
+                          key={order.id}
+                          className="mb-4 flex flex-col gap-1"
+                        >
+                          <p className="text-zinc-700">
+                            <strong>Comanda:</strong> {order.id}
+                          </p>
+                          <p className="text-zinc-700">
+                            <strong>Cliente:</strong>{" "}
+                            {order.customerName || "Sem nome"}
+                          </p>
+                          <p className="text-zinc-700">
+                            <strong>Status do pedido:</strong>{" "}
+                            {order.status || "Desconhecido"}
+                          </p>
+                          <p className="text-zinc-700">
+                            <strong>Total:</strong>{" "}
+                            {order.formattedTotalValue || "R$0,00"}
+                          </p>
 
-                        <h4 className="text-lg font-semibold text-black">
-                          Itens:
-                        </h4>
-                        {order.items && order.items.length > 0 ? (
-                          order.items.map((item, itemIndex) => (
-                            <>
-                              <p
-                                key={`${item.productName}-${itemIndex}`}
-                                className="text-zinc-700"
-                              >
-                                {item.productName} - {item.quantity}x R${" "}
-                                {item.unitPrice.toFixed(2)} (Total: R${" "}
-                                {item.totalPrice.toFixed(2)})
-                              </p>
-                              <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-4"></div>
-                            </>
-                          ))
-                        ) : (
-                          <>
+                          <h4 className="text-lg font-semibold text-black">
+                            Itens:
+                          </h4>
+                          {order.items && order.items.length > 0 ? (
+                            order.items.map((item, itemIndex) => (
+                              <div key={`${item.productName}-${itemIndex}`}>
+                                <p className="text-zinc-700">
+                                  {item.productName} - {item.quantity}x R${" "}
+                                  {item.unitPrice.toFixed(2)} (Total: R${" "}
+                                  {item.totalPrice.toFixed(2)})
+                                </p>
+                                <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-4"></div>
+                              </div>
+                            ))
+                          ) : (
                             <p className="text-zinc-700">
                               Nenhum item nesta comanda.
                             </p>
-                            <div className="h-[1px] bg-gradient-to-r from-[#FF4D00] via-[#FF0000] to-[#FFD700] my-4"></div>
-                          </>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-zinc-700">Nenhuma comanda disponível.</p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-zinc-700">Carregando detalhes da mesa...</p>
-              )}
-            </Modal>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-zinc-700">
+                        Nenhuma comanda disponível.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-zinc-700">
+                    Carregando detalhes da mesa...
+                  </p>
+                )}
+              </Modal>
+            )}
           </CardContent>
         </Card>
       </main>
@@ -289,7 +352,7 @@ export default function TableGrid() {
               className="text-[#FF6B2B]"
               onClick={() => router.push("/openOrder")}
             >
-              Lançar pedidos
+              Abrir Comanda
             </Button>
             <Button variant="ghost" className="text-[#FFD700]">
               Consulta produtos

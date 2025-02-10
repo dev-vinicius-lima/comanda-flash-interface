@@ -1,6 +1,7 @@
-export type Order = {
-  id: number
-  orderId: number
+export interface Order {
+  number: number
+  id: number | null
+  orderId: number | null
   tableNumber: number
   status: string
   totalValue: number
@@ -31,5 +32,15 @@ export interface OrderDetail {
   items: Item[]
   totalValue: number
   formattedTotalValue: string
-  orders: Order[]
+  orders?: Order[]
+}
+export type NewOrderItem = {
+  id: number
+  orderId: string
+  totalValue: number
+  formattedTotalValue: string
+  customerName: string
+  tableNumber: number
+  status: string
+  items: Item[]
 }
