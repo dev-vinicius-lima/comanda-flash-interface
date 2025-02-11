@@ -1,11 +1,8 @@
-// hooks/useFetchTables.ts
-import { Order, OrderDetail } from "@/app/types/types"
 import { useState, useEffect } from "react"
+import { Table, TableSection } from "@/app/types/types"
 
-export function useFetchTables() {
-  const [tables, setTables] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+const useFetchTables = (): Table[] => {
+  const [tables, setTables] = useState<Table[]>([])
 
   useEffect(() => {
     const fetchTables = async () => {
@@ -21,50 +18,36 @@ export function useFetchTables() {
             },
           }
         )
-        const data = await response.json()
-        setTables(data)
+        if (!response.ok) {
+          throw new Error("Erro ao buscar as mesas")
+        }
+        const data: TableSection[] = await response.json()
+        setTables(transformDataToTables(data))
       } catch (error) {
-        setError("Erro ao buscar as mesas" + error)
-      } finally {
-        setLoading(false)
+        console.error("Erro ao buscar dados da API:", error)
       }
     }
 
     fetchTables()
   }, [])
 
-  return { tables, loading, error }
+  return tables
 }
 
-// hooks/useFetchTableDetails.ts
-export function useFetchTableDetails(tableId: number) {
-  const [details, setDetails] = useState<OrderDetail | null>(null)
-
-  useEffect(() => {
-    const fetchDetails = async () => {
-      try {
-        const token = sessionStorage.getItem("token")
-        const response = await fetch(
-          `https://comanda-flash-production.up.railway.app/tables/${tableId}`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        )
-        const data = await response.json()
-        setDetails(data)
-      } catch (error) {
-        console.error("Erro ao buscar detalhes da mesa:", error)
-      }
-    }
-
-    if (tableId) {
-      fetchDetails()
-    }
-  }, [tableId])
-
-  return details
+const transformDataToTables = (data: TableSection[]): Table[] => {
+  return data.map((section) => ({
+    id: section.id,
+    orderId: section.orders.length > 0 ? section.orders[0].id : null,
+    number: section.number,
+    tableNumber: section.number,
+    status: section.orders.some((order) => order.status === "Aberta")
+      ? "occupied"
+      : "available",
+    totalValue: 0,
+    formattedTotalValue: "R$ 0,00",
+    customerName: "",
+    items: [],
+  }))
 }
+
+export default useFetchTables

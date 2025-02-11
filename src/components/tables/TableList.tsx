@@ -1,4 +1,4 @@
-import { Order, OrderDetail } from "@/app/types/types"
+import { Order, OrderDetail, Table } from "@/app/types/types"
 import { Button } from "../ui/button"
 import { useState } from "react"
 import Modal from "./modal/Modal"
@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { SearchInputs } from "./SearchBar"
 
 interface TableListProps {
-  tables: Order[]
+  tables: Table[]
   onTableClick: (tableId: number) => void
 }
 

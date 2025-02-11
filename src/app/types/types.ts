@@ -1,7 +1,8 @@
 export interface Order {
+  orders(orders: Order): unknown
   number: number
-  id: number | null
-  orderId: number | null
+  id: number
+  orderId: number
   tableNumber: number
   status: string
   totalValue: number
@@ -21,6 +22,7 @@ export interface Item {
   totalPrice: number
   unitPrice: number
 }
+
 export interface OrderDetail {
   number: number
   id: number
@@ -43,4 +45,36 @@ export type NewOrderItem = {
   tableNumber: number
   status: string
   items: Item[]
+}
+
+export interface Order {
+  id: number
+  orderId: number
+  totalValue: number
+  formattedTotalValue: string
+  customerName: string
+  tableNumber: number
+  status: string
+  items: {
+    productName: string
+    quantity: number
+    unitPrice: number
+    totalPrice: number
+  }[]
+}
+export interface Table {
+  totalValue: number
+  formattedTotalValue: string
+  customerName: string
+  items: Item[]
+  id: number
+  orderId: number | null
+  number: number
+  tableNumber: number
+  status: string
+}
+export interface TableSection {
+  id: number
+  number: number
+  orders: Order[]
 }
